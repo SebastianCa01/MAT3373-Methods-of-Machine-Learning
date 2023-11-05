@@ -1,0 +1,323 @@
+---
+title: "Assignment 2 - 3373"
+author: "Sebastian Doka and Justin Yee"
+date: "2023-02-13"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+\newpage
+### Question 1
+Here are the functions for the error rate and the mean log loss
+```{r}
+# inputs:
+# ytrue is a vector of true binary responses (0 or 1)
+# ypred is a vector of binary predictions (0 or 1)
+# yprob is a vector of probabilistic predictions (between 0 and 1)
+
+error.rate = function(ypred, ytrue){
+  
+  correct = 0
+  
+  for (i in 1:length(ypred)){
+    if (ypred[i] == ytrue[i]){
+      correct = correct + 1
+    }
+  }
+  
+  incorrect = length(ytrue)-correct
+  err.rate = incorrect/length(ypred)
+  
+  return(err.rate)
+}
+
+mean.log.loss = function(yprob, ytrue){
+  
+  loss.vector = c()
+  
+  for (i in 1:length(yprob)){
+    log.loss = -(ytrue[i])*log(yprob[i]) - (1 - ytrue[i])*log(1 - yprob[i]) #cross entropy loss function
+    loss.vector = c(loss.vector, log.loss)
+  }
+  
+  mean.log.loss = mean(loss.vector)
+  
+  return(mean.log.loss)
+}
+
+# Test:
+ytrue = c(0,1)
+ypred = c(1,1)
+yprob = c(0.8,0.55)
+
+
+print(paste('Error rate = ', error.rate(ypred, ytrue)))
+print(paste('Mean log loss = ', round(mean.log.loss(yprob, ytrue),3)))
+
+
+```
+
+
+### Question 2 
+
+Load penguins dataset
+
+```{r echo=FALSE}
+library(palmerpenguins)
+summary(penguins)
+library(tidyverse)
+df = subset(penguins, select = c('species','bill_length_mm','flipper_length_mm','body_mass_g','sex'))
+df = na.omit(df)
+df$sex = as.numeric(df$sex)
+for(i in 1:length(df$sex)){
+    df$sex[i] = df$sex[i]-1
+}
+```
+
+
+A) 
+
+```{r echo= FALSE}
+library(ISLR2)
+binarymodel <- glm(sex ~ ., family=binomial,data=df)
+binarymodel
+yprob = predict(binarymodel, type = 'response')
+ypred = round(yprob)
+er <- error.rate(ypred,df$sex)
+mll <- mean.log.loss(yprob,df$sex)
+
+
+
+```
+    The error rate is `r er`.
+    The mean log loss is `r mll`.
+B)
+
+```{r echo= FALSE}
+B4 = summary(binarymodel)$coefficients[[5]]
+B4 = round(B4, digits = 4)
+exp1 = exp(B4)
+
+```
+The regression coefficient associated with flipper length is B4 = `r B4`. 
+This means that for every one mm increase in flipper_length, the odds of having a male sex penguin are multiplied by exp(`r B4`) = `r exp1`.  
+
+C)
+
+```{r echo= FALSE}
+B1 = summary(binarymodel)$coefficients[[2]]
+B2 = summary(binarymodel)$coefficients[[3]]
+B1 = round(B1, digits = 4)
+B2 = round(B2, digits = 4)
+```
+There are two regression variables associated with the species variable one for speciesChinstrap and one for speciesGentoo. 
+For speciesChinstrap the regression coefficient is B1 = `r B1` and for speciesGentoo the regression coefficient is B2 = `r B2`. From that we can tell that for 1 penguin in speciesChinstrap we have a decrease of exp(B1)= `r exp(B1)` in the sex of penguins. From that we can also tell that for 1 penguin in speciesGentoo we have a decrease of exp(B2)= `r exp(B2)` in the sex of penguins. But we also know that penguins is a binary variable with 0 as females and 1 as males. Therefore because both species have a negative coefficients the number of males decreases and the number of females increase for each species.As we can see that the speciesChinstrap has a lower regression coefficient value in this meaning more closer to 0 and to postive values therefore it has a higher proportion of male penguins than speciesGentoo.
+
+D)
+```{r echo= FALSE}
+library(palmerpenguins)
+summary(penguins)
+library(tidyverse)
+df = subset(penguins, select = c('species','bill_length_mm','flipper_length_mm','body_mass_g','sex'))
+df = na.omit(df)
+df$sex = as.numeric(df$sex)
+for(i in 1:length(df$sex)){
+    df$sex[i] = df$sex[i]-1
+}
+set.seed(1)
+train_size = floor(0.6 * nrow(df))
+train_ind = sample(seq_len(nrow(df)), size = train_size)
+train = df[train_ind, ]
+test = df[-train_ind, ]
+trainfit <- glm(sex ~ species + bill_length_mm + flipper_length_mm + body_mass_g, family=binomial,data=train)
+yprobt = predict(trainfit, newdata=test, type='response')
+ypredt = round(yprobt)
+ert <- error.rate(ypredt,test$sex)
+mllt <- mean.log.loss(yprobt,test$sex)
+
+```
+After splitting the dataset into two parts: train and test sets.  We get that the error rate on the test set is `r ert` and the mean log loss on the test is `r mllt`
+
+
+E)
+```{r echo= FALSE}
+library(class)
+
+train$species = as.numeric(train$species)
+test$species = as.numeric(test$species)
+
+
+model.knn <- knn(train,test,train$sex,k =3)
+
+error.rate <- mean(model.knn != test$sex)
+```
+
+After using the already data set from the previous and using a value of k=3, we get an error rate of `r error.rate`
+
+### Question 3
+
+A)
+```{r echo= FALSE}
+library(palmerpenguins)
+summary(penguins)
+library(tidyverse)
+df = subset(penguins, select = c('species','bill_length_mm','flipper_length_mm','body_mass_g','sex'))
+df = na.omit(df)
+df$sex = as.numeric(df$sex)
+for(i in 1:length(df$sex)){
+    df$sex[i] = df$sex[i]-1
+}
+
+df$species <- as.factor(df$species)
+levels(df$species)
+
+set.seed(1)
+train_size = floor(0.6 * nrow(df))
+train_ind = sample(seq_len(nrow(df)), size = train_size)
+train = df[train_ind, ]
+test = df[-train_ind, ]
+
+library(nnet)
+
+multi_mo <- multinom(species ~ ., data = train, model=TRUE, maxit=20)
+
+train.preds = predict(multi_mo,newdata=train)
+accuracy.train = mean(train.preds == train$species)
+ert = 1- accuracy.train
+```
+The training error rate for the model is `r ert `.
+
+B)
+```{r echo= FALSE}
+library(nnet)
+
+multi_mo <- multinom(species ~ sex + flipper_length_mm + body_mass_g + bill_length_mm, data = df,model=TRUE)
+
+chinz= summary(multi_mo)$coefficients[[1]]+head(df$sex[1])*summary(multi_mo)$coefficients[[3]] + head(df$flipper_length_mm[1])*summary(multi_mo)$coefficients[[5]] + head(df$body_mass_g[1])*summary(multi_mo)$coefficients[[7]] + head(df$bill_length_mm[1])*summary(multi_mo)$coefficients[[9]]
+
+gez= summary(multi_mo)$coefficients[[2]]+head(df$sex[1])*summary(multi_mo)$coefficients[[4]] + head(df$flipper_length_mm[1])*summary(multi_mo)$coefficients[[6]] + head(df$body_mass_g[1])*summary(multi_mo)$coefficients[[8]] + head(df$bill_length_mm[1])*summary(multi_mo)$coefficients[[10]]
+aez=0
+sum = exp(chinz)+ exp(gez) + exp(aez)
+pch=exp(chinz)/sum
+pg=exp(gez)/sum
+pa=exp(aez)/sum
+
+```
+The corresponding z-scores for each of the species are: SpeciesChinstrap: `r chinz`, speciesGentoo: `r gez` and for speciesAdelie: `r aez`. The speciesAdelie is the reference level.
+The p values for each of the species are:  SpeciesChinstrap: `r pch`, speciesGentoo: `r pg` and for speciesAdelie: `r pa`.
+
+### Question 4
+
+Binomial logistic regression with weights $\mathbf{w} = \mathbf{w_1} - \mathbf{w_0}$:
+
+
+\begin{align}
+P(Y = 0) &= \frac{\exp(-\mathbf{w}\cdot x)}{1 + \exp(-\mathbf{w} \cdot x)} \\
+\end{align}
+
+
+\begin{align}
+P(Y = 1) &= 1 - P(Y = 0) \\
+&= \frac{1}{1 + \exp(-\mathbf{w} \cdot x)}
+\end{align}
+
+
+Now using multinomial logistic regression:
+
+
+\begin{align}
+P(Y = 0) &= \frac{\exp(\mathbf{w_0}\cdot x)}{\exp(\mathbf{w_0} \cdot x) + \exp(\mathbf{w_1} \cdot x)} \\
+&= \frac{\exp((\mathbf{w_0-w_1})\cdot x)}{\exp((\mathbf{w_0-w_1})\cdot x) + 1} \\
+&= \frac{\exp(-\mathbf{w}\cdot x)}{1 + \exp(-\mathbf{w}\cdot x)} \\
+\end{align}
+
+
+\begin{align}
+P(Y = 1) &= \frac{\exp(\mathbf{w_1}\cdot x)}{\exp(\mathbf{w_0} \cdot x) + \exp(\mathbf{w_1} \cdot x)} \\
+&= \frac{1}{\exp((\mathbf{w_0-w_1})\cdot x) + 1} \\
+&= \frac{1}{1 + \exp(-\mathbf{w}\cdot x)} \\
+\end{align}
+
+From this we can see that binomial logistic regression with weight vector $\textbf{w}$ and multinomial logistic regression with two cases produce the same predictions.
+
+### Question 5
+
+#### a)
+
+We have that $\sigma(z) = \frac{1}{1+\exp(-z)}$ as well as $(1-\sigma(z)) = \frac{\exp(-z)}{1+\exp(-z)}$. So when we take $\frac{d}{dz}\sigma(z) = \sigma^`(z)$ we will get 
+
+\begin{align}
+\sigma^`(z) &= \frac{d}{dz}\left(\frac{1}{1+\exp(-z)}\right) \\
+&= -(1+\exp(-z))^{-2}(-\exp(-z)) \\
+&= \frac{-\exp(-z)}{-(1+\exp(-z))^2} \\
+&= \frac{\exp(-z)}{(1+\exp(-z))^2} \\
+&= \frac{1}{1+\exp(-z)} * \frac{\exp(-z)}{1+\exp(-z)} \\
+&= \sigma(z) * (1 - \sigma(z))
+\end{align}
+
+
+#### b)
+
+Following similar steps to part (a) we have that
+
+\begin{align}
+\frac{\partial}{\partial \beta_j} \sigma(\beta_0 + \beta_1 x^1_i + \dots + \beta_p x^p_i) &= \frac{\partial}{\partial \beta_j} \left( \frac{1}{1 + \exp(-\beta_0 - \beta_1 x^1_i - \dots - \beta_p x^p_i)} \right) \\
+&= \frac{\partial}{\partial \beta_j} \left( \frac{1}{1 + \exp(-\beta_j x^j_i) \exp(-\beta_0) \exp(-\beta_1 x^1_i) \dots \exp(-\beta_p x^p_i)} \right) \\ 
+&= -(1 + \exp(-\beta_j x^j_i) (\dots))^{-2} * (-x^j_i \exp(-\beta_j x^j_i)(\dots)) \\
+&= \frac{1}{1 + \exp(-\beta_j x^j_i) (\dots)} * \frac{x^j_i \exp(-\beta_j x^j_i)(\dots)}{1 + \exp(-\beta_j x^j_i) (\dots)} \\
+&= x^j_i * \frac{1}{1 + \exp(-\beta_j x^j_i) (\dots)} * \frac{\exp(-\beta_j x^j_i)(\dots)}{1 + \exp(-\beta_j x^j_i) (\dots)} \\
+&= x^j_i * p_i * (1 - p_i)
+\end{align}
+
+
+#### c) 
+
+We have that $l_i = -y_i \log(p_i) - (1-y_i)\log(1-p_i)$, $p_i = \sigma(z_i) = \frac{1}{1+\exp(-z_i)}$, and $z_i = \beta_0 + \beta_1 x^1_i + \dots + \beta_p x^p_i$.
+
+We then take $\frac{\partial l_i}{\partial \beta_j} = \frac{\partial}{\partial \beta_j}(-y_i \log(p_i)) + \frac{\partial}{\partial \beta_j} (-(1-y_i) \log(1-p_i))$ and solve each partial derivative separately.
+
+
+\begin{align}
+\frac{\partial}{\partial \beta_j}(-y_i \log(p_i)) &= -y_i \frac{\partial}{\partial \beta_j} \log(p_i) \\
+&= -y_i\left(\frac{\partial}{\partial \beta_j}( \log(1) - \log( 1 + \exp(-z_i)))\right) \\
+&= -y_i\left(\frac{\partial}{\partial \beta_j}( - \log( 1 + \exp(-z_i)))\right) \\
+&= y_i \left(\frac{1}{1 +  \exp(-z_i)}\right)\left(\frac{\partial}{\partial \beta_j}( 1 + \exp(-z_i))\right) \\
+&= y_i \left(\frac{1}{1 +  \exp(-z_i)}\right)(-x^j_i \exp(-z_i)) \\
+&= -x^j_i y_i (1 - p_i) \\
+&= x^j_i y_i (p_i - 1) \\
+\end{align}
+
+\begin{align}
+\frac{\partial}{\partial \beta_j} (-(1-y_i) \log(1-p_i)) &= -(1 - y_i) \left(\frac{\partial}{\partial \beta_j} \log(1 - p_i)\right) \\
+&= -(1 - y_i) \left( \frac{\partial}{\partial \beta_j} \log( \exp(-z_i)) - \frac{\partial}{\partial \beta_j} \log(1 + \exp(-z_i))\right) \\
+&= -(1 - y_i) \left( \frac{1}{\exp(-z_i)}\frac{\partial}{\partial \beta_j} ( \exp(-z_i)) - \frac{1}{1 + \exp(-z_i)}\frac{\partial}{\partial \beta_j} (1 + \exp(-z_i))\right) \\
+&= -(1 - y_i) \left( \frac{-x^j_i \exp(-z_i)}{\exp(-z_i)} - \frac{-x^j_i \exp(-z_i)}{1 + \exp(-z_i)}\right) \\
+&= x^j_i (1 - y_i) (1 - (1 - p_i)) \\
+&= x^j_i (1 - y_i) (p_i)
+\end{align}
+
+Now we can add the results.
+
+\begin{align}
+x^j_i y_i (p_i - 1) + x^j_i (1 - y_i) (p_i)) &= x^j_i(y_i p_i - y_i + p_i - y_i p_i) \\
+&= x^j_i (p_i - y_i)
+\end{align}
+
+
+### Question 6
+
+#### a)
+
+KNN classification would be good here as it would allow us to compare the taken image to known images of characters and evaluate how close (similar) they are. Considering most shipping labels are printed, this would be pretty dang accurate.
+
+#### b)
+
+Multiple linear regression would be pretty good as we're trying to see which of our predictor variables (feature satisfaction) have the most impact on our response variable (overall satisfaction). So we'll be able to see which are significant and just how much each feature is weighted.
+
+#### c)
+
+KNN classification would be good as it could find among the patient data a case very similar to the current patient and provide a starting point for medical staff.
