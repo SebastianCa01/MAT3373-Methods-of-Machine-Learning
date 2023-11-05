@@ -1,0 +1,158 @@
+---
+title: "Assignment 5"
+author: "Sebastian Doka"
+date: "2023-03-30"
+output: pdf_document
+---
+
+Question 2
+
+A)
+```{r}
+coris = read.csv("coris.dat")
+coris[["id"]] = NULL # remove "row.names" column
+# Normalize the numeric columns:
+normalise = function(x) {
+return ((x - mean(x)) / sd(x)) }
+normcoris <- as.data.frame(lapply(coris, normalise))
+# use the unnormalized versions of the binary variables:
+normcoris$famhist <- coris$famhist
+normcoris$chd <- coris$chd # this is the response variable
+library(caret)
+set.seed(1)
+ind <- createDataPartition(normcoris$chd, p = .6, list=FALSE)
+train = normcoris[ind,]
+test = normcoris[-ind,]
+
+
+
+model <- glm(chd ~ ., data=train, family=binomial)
+summary(model)
+yprobs = predict(model, newdata=test, type='response')
+
+ypred = round(yprobs)
+table(ypred, test$chd)
+
+error_rate = mean(ypred != test$chd)
+error_rate
+
+
+
+
+```
+The variable with the most effect is the famhist because it has the highest estimated value(0.75893) meaning it has the most effect on the variable chd. 
+
+The miscalculation rate is: 0.2934783
+
+
+```{r}
+library (randomForest)
+set.seed (1)
+rf.coris <- randomForest (chd ~ ., data = train,mtry=6, importance = TRUE)
+importance(rf.coris)
+yprobs = predict(rf.coris, newdata=test, type='response')
+ypred = round(yprobs)
+miscalulation_rate = mean(ypred != test$chd)
+print(paste("The miscalculation rate is: ",miscalulation_rate))
+varImpPlot(rf.coris)
+```
+The variable with the greatest importance is tobacco with an importance of 16.6329001.
+The miscalculation rate is:  0.33695652173913.
+
+Question3)
+```{r}
+load('mnist23small.Rdata') # 1000 training digits, 1000 test
+# When first loaded, the y column in each data frame is of type integer
+# and takes values 1 or 2 (the digit shown in the image).
+# Convert these integer variables into nominal variables, i.e. factors.
+# This is needed by some classification algorithms
+test$y = as.factor(test$y)
+train$y = as.factor(train$y)
+# "Normalise" the intensity of each pixel
+normalise <- function(x) {
+return(x / 255)
+}
+train[,-1] = lapply(train[, -1], normalise)
+test[,-1] = lapply(test[,-1], normalise)
+# Note that "normalise" often means: centre (i.e. subtract the mean), and
+# scale to variance 1, which is not what we've done here, but it's similar.
+
+
+
+showdigit = function(imrow, label) {
+im = matrix(imrow, nrow=28)[,28:1] #reverse
+image(im, col=gray((0:255)/255),
+xaxt='n', yaxt='n', main=label, asp = 1
+)
+}
+par(mfrow=c(2,4))
+for(i in 1:8){
+showdigit(as.matrix(train[i, 2:785]), paste(train$y[i]))
+}
+```
+
+A)KNN with K=30
+```{r}
+library(class)
+library(caret)
+
+Xtrain = train[,2:785]
+Xtrain_matrix = data.matrix(Xtrain)
+Xtest = test[,2:785]
+Xtest_matrix = data.matrix(Xtest)
+
+Ntest = 1000
+ypred = knn(Xtrain_matrix , Xtest_matrix ,train$y, k = 30, prob = TRUE) 
+
+
+error.rate = function(ypred, ytrue){
+err.rate = mean(ypred != ytrue) 
+return(err.rate)
+}
+print(paste('Error rate = ', error.rate(ypred,test$y)))
+```
+
+B)
+```{r}
+
+library(randomForest)
+set.seed(1)
+bag.mnist <- randomForest(train$y ~ ., data = train, mtry = ncol(train)-1, importance = TRUE)
+
+ypred <- predict (bag.mnist , newdata = test)
+
+print(paste('Error rate = ', error.rate(ypred,test$y)))
+```
+
+C)
+```{r}
+set.seed(1)
+rf.mnist <- randomForest(train$y ~ ., data = train, mtry = sqrt(ncol(train)-1), importance = TRUE)
+
+ypred <- predict (rf.mnist , newdata = test)
+
+print(paste('Error rate = ', error.rate(ypred,test$y)))
+
+```
+
+D)
+```{r}
+library(nnet)
+mnist.nn2 <- nnet(train$y ~ ., data = train, size = 10,rang = 0.01,
+decay = 0.01, maxit = 50,MaxNWts = 7862)
+ypred <- predict (mnist.nn2 , newdata = test, type="class")
+
+print(paste('Error rate = ', error.rate(ypred,test$y)))
+
+```
+
+
+E)
+
+```{r}
+for (i in 1:10){
+w=mnist.nn2$wts
+recep = w[(785*(i-1)+1):(785*(i-1)+784)]
+showdigit(as.matrix(recep), paste(i))}
+```
+
