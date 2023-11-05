@@ -1,0 +1,236 @@
+---
+title: "A3"
+author: "Sebastian Doka"
+date: "2023-03-01"
+output:
+  pdf_document: default
+  html_notebook: default
+---
+
+
+
+Question 1:
+A)If I test positive on a Covid Rapid Test, what’s the probability that I actually have Covid?
+
+Let Y represent the probability of having covid, with Y=0 for not having covid and Y=1 for having covid. Let X represent the result of the Covid Rapid Test with X=0 for a negative result and X=1 for a positive result.
+
+P(Y = 1|X = 1) = P(X=1|Y=1)P(Y=1)/P(X=1)
+
+P(Y = 1|X = 1) = P(X=1|Y=1)P(Y=1)/P(X=1|Y=0)*P(Y=0)+P(X=1|Y=1)*P(Y=1)
+
+P(Y = 1|X = 1) = 0.6*0.01/0.005*0.99+0.6*0.01
+
+P(Y = 1|X = 1) = 0.5479452
+
+Therefore the probability of having covid if testing positive for a Covid Rapid Test is 54.79%.
+
+B) If I test negative on a Covid Rapid Test, what’s the probability that I actually have Covid anyway, i.e. the
+test was wrong?
+
+P(Y = 1|X = 0) = P(X=0|Y=1)P(Y=1)/P(X=0)
+
+P(Y = 1|X = 0) = P(X=0|Y=1)P(Y=1)/P(X=0|Y=0)*P(Y=0)+P(X=0|Y=1)*P(Y=1)
+
+P(Y = 1|X = 0) = 0.4*0.99/0.995*0.99+0.4*0.01
+
+P(Y = 1|X = 0) = 0.0040443
+
+Therefore the probability of having covid if testing negative for a Covid Rapid Test is 0.4044%.
+
+C) If I test negative twice, and we assume the results from the two tests are independent (a questionable
+assumption), then what’s the probability that I actually have Covid?
+
+Because we are assuming the two tests are independent therefore the probability of having covid if negative twice for a Covid Rapid Test is the probabilty of having covid if testing negative once for Covid Rapid squared meaning 0.404^2 = 0.001636%.
+
+Question 2:
+
+A)
+```{r echo=FALSE}
+library(mnormt)
+
+x <- seq(-5, 5, 0.25)
+y <- seq(-5, 5, 0.25)
+mu <- c(0,0)
+sigma <- matrix(c(1, 0, 0, 4), nrow = 2)
+f <- function(x, y) {dmnorm(cbind(x, y), mu, sigma)}
+z <- outer(x, y, f)
+
+contour(x, y, z)
+```
+
+
+```{r echo=FALSE}
+library(mnormt)
+
+x <- seq(-5, 5, 0.25)
+y <- seq(-5, 5, 0.25)
+mu <- c(0,0)
+sigma <- matrix(c(5, 3, 3, 5), nrow = 2)
+f <- function(x, y) {dmnorm(cbind(x, y), mu, sigma)}
+z <- outer(x, y, f)
+
+contour(x, y, z)
+```
+
+B)
+```{r}
+library(mnormt)
+
+x <- seq(-5, 5, 0.25)
+y <- seq(-5, 5, 0.25)
+mu <- c(0,0)
+sigma <- matrix(c(3, -1.1, -1.1, 0.9), nrow = 2)
+f <- function(x, y) {dmnorm(cbind(x, y), mu, sigma)}
+z <- outer(x, y, f)
+
+contour(x, y, z)
+
+```
+
+Question 3
+
+A)
+```{r echo=FALSE}
+library(palmerpenguins)
+df = subset(penguins, species == 'Gentoo')
+df = df[,c("sex","body_mass_g","flipper_length_mm","bill_length_mm")]
+df = na.omit(df)
+
+library(caret)
+set.seed(1)
+ind <- createDataPartition(df$sex, p = .5, list=FALSE)
+train = df[ind,]
+test = df[-ind,]
+
+train_male = subset(train, sex=='male')
+train_female = subset(train, sex=='female')
+
+mu_m_flipper = mean(train_male$flipper_length_mm)
+sd_m_flipper = sd(train_male$flipper_length_mm)
+var_m_flipper = var(train_male$flipper_length_mm)
+mu_f_flipper = mean(train_female$flipper_length_mm)
+sd_f_flipper = sd(train_female$flipper_length_mm)
+var_f_flipper = var(train_female$flipper_length_mm)
+  
+mu_m_bill = mean(train_male$bill_length_mm)
+sd_m_bill = sd(train_male$bill_length_mm)
+var_m_bill = var(train_male$bill_length_mm)
+mu_f_bill = mean(train_female$bill_length_mm)
+sd_f_bill = sd(train_female$bill_length_mm)
+var_f_bill = var(train_female$bill_length_mm)
+
+print(paste("Mean of flipper length in subset male:" , round(mu_m_flipper,digits = 4)))
+print(paste("Standard deviation of flipper length in subset male:" , sd_m_flipper))
+print(paste("Variance of flipper length in subset male:" ,var_m_flipper))
+print(paste("Mean of flipper length in subset female:" ,mu_f_flipper))
+print(paste("Standard deviation of flipper length in subset female:" ,sd_f_flipper))
+print(paste("Variance of flipper length in subset female:" ,var_f_flipper))
+
+print(paste("Mean of bill length in subset male:" ,mu_m_bill))
+print(paste("Standard deviation of bill length in subset male:" ,sd_m_bill))
+print(paste("Variance of bill length in subset male:" ,var_m_bill))
+print(paste("Mean of bill length in subset female:" ,mu_f_bill))
+print(paste("Standard deviation of bill length in subset female:" ,sd_f_bill))
+print(paste("Variance of bill length in subset female:" ,var_f_bill))
+
+```
+
+B)
+```{r}
+mu_m = c(mu_m_flipper, mu_m_bill)
+mu_f = c(mu_f_flipper, mu_f_bill)
+sd_m = c(sd_m_flipper, sd_m_bill)
+sd_f = c(sd_f_flipper, sd_f_bill)
+# Gaussian Naive Bayes for 2 classes (male and female) and 2 predictor variables
+GNB2 = function(X, pi_m, mu_m, sd_m, mu_f, sd_f){
+# Inputs:
+# X = a dataframe with two columns (the predictors)
+# pi_m = a prior probability for class 'male'
+# All the other inputs are vectors of length 2, corresponding to 2 predictor variables
+# mu_m = a mean vector for class 'male'
+# sd_m = a standard deviation vector for class 'male'
+# mu_f = a mean vector for class 'female'
+# sd_f = a standard deviation vector for class 'female'
+##
+#Output: a vector of posterior probabilities for class 'male'
+for (i in 1:nrow(X)){
+likelihood_male = dnorm(X$flipper_length_mm[i], mean=mu_m[1], sd = sd_m[1]) *
+dnorm(X$bill_length_mm[i], mean=mu_m[2], sd = sd_m[2])
+likelihood_female = dnorm(X$flipper_length_mm[i], mean=mu_f[1], sd = sd_f[1]) *
+dnorm(X$bill_length_mm[i], mean=mu_f[2], sd = sd_f[2])
+X$posterior_male[i] = (likelihood_male * pi_m) / (likelihood_male * pi_m + likelihood_female * pi_m)
+}
+
+return(X$posterior_male)
+}
+
+library(class)
+predictors = df[,c("flipper_length_mm", "bill_length_mm" )]
+
+grid = expand.grid(x=201:240, y=41:60) 
+classes.grid = GNB2(predictors,0.5,mu_m,sd_m,mu_f,sd_f)
+classes.grid
+```
+
+C)
+```{r}
+#library(palmerpenguins)
+df = subset(penguins, species == 'Gentoo')
+predictors = df[,c("flipper_length_mm", "bill_length_mm" )]
+#predictors = na.omit(predictors)
+
+mu_m = c(mu_m_flipper, mu_m_bill)
+mu_f = c(mu_f_flipper, mu_f_bill)
+sd_m = c(sd_m_flipper, sd_m_bill)
+sd_f = c(sd_f_flipper, sd_f_bill)
+
+library(class)
+
+
+grid = expand.grid(x=201:240, y=41:60) 
+classes.grid = GNB2(predictors,0.5,mu_m,sd_m,mu_f,sd_f)
+
+
+#contour(x=201:240, y=41:60, z=matrix(classes.grid, nrow=40), 
+ #       levels=0.5,col="grey", drawlabels=FALSE, lwd=2)
+
+
+#points(df$flipper_length_mm, df$bill_length_mm, col=df$sex)
+```
+
+D)
+```{r}
+library(palmerpenguins)
+df = subset(penguins, species == 'Gentoo')
+df = df[,c("sex","body_mass_g","flipper_length_mm","bill_length_mm")]
+df = na.omit(df)
+
+library(caret)
+set.seed(1)
+ind <- createDataPartition(df$sex, p = .5, list=FALSE)
+train = df[ind,]
+test = df[-ind,]
+
+mu_m = c(mu_m_flipper, mu_m_bill)
+mu_f = c(mu_f_flipper, mu_f_bill)
+var_m = c(mean(var_m_flipper), mean(var_m_bill))
+var_f = c(mean(var_f_flipper), mean(var_f_bill))
+
+library(class)
+predictors = df[,c("flipper_length_mm", "bill_length_mm" )]
+
+grid = expand.grid(x=201:240, y=41:60) 
+classes.grid = GNB2(predictors,0.5,mu_m,var_m,mu_f,var_f)
+
+
+#contour(x=201:240, y=41:60, z=matrix(classes.grid, nrow=1), levels=0.5,col="grey", drawlabels=FALSE, lwd=2)
+
+ #points(df$flipper_length_mm, df$bill_length_mm, col=df$sex)
+```
+
+
+E)
+```{r}
+
+```
+
