@@ -1,0 +1,182 @@
+---
+title: "A1 Methods of Machine Learning"
+author: "Sebastian Doka"
+date: "2023-01-30"
+output:
+  pdf_document: default
+---
+
+Question 1:
+We then load the `penguins` dataset and Select only the columns containing the species, sex, body mass, flipper length
+and bill length. At the end we remove the rows with missing values in any of these columns.
+```{r echo=FALSE}
+
+library(palmerpenguins)
+summary(penguins)
+library(tidyverse)
+df = subset(penguins, select = c('species','bill_length_mm','flipper_length_mm','body_mass_g','sex') ) 
+df = na.omit(df)
+
+```
+Now we create plots to visualize the relationship between body mass and the other 4 variables:
+
+```{r echo=FALSE}
+plot(df$species,df$body_mass_g ,main="Relantionship between Body Mass (g) and Species", ylab="Body Mass (g)", xlab="Species" )
+```
+
+```{r echo=FALSE}
+plot(df$sex,df$body_mass_g ,main="Relantionship between Body Mass (g) and Sex", ylab="Body Mass (g)", xlab="Sex" )
+
+```
+
+```{r echo=FALSE}
+plot(df$flipper_length_mm,df$body_mass_g ,main="Relantionship between Body Mass (g) and Flipper Length (mm)", ylab="Body Mass (g)", xlab="Flipper Length (mm)" )
+```
+
+```{r echo=FALSE}
+plot(df$bill_length_mm,df$body_mass_g ,main="Relantionship between Body Mass (g) and Bill Length (mm)", ylab="Body Mass (g)", xlab="Bill Length (mm)" )
+```
+
+Question 2
+
+Performing a simple OLS linear regression of body mass (the response variable) on flipper length (the predictor),
+using all rows from the data.
+```{r echo=FALSE}
+lm.fit <- lm(body_mass_g~flipper_length_mm, data=df)
+summary(lm.fit)
+B0 = summary(lm.fit)$coefficients[[1]]
+B0= round(B0,digits = 4)
+B1 = summary(lm.fit)$coefficients[[2]]
+B1 = round(B1, digits = 4)
+R2 = summary(lm.fit)$r.squared
+B0
+```
+A) Linear model obtained from OLS:
+                      body mass = `r B0` + `r B1`  * (flipper length).
+                      
+The value for $R^2$ is 
+                 $R^2$ = `r R2`.
+
+B)
+```{r echo=FALSE}
+plot(predict(lm.fit), residuals(lm.fit))
+```
+This is a good model, residuals seem normally distributed around zero, with a mean and variance that is independent of the predicted value. Looking at the $R^2$ value it is a pretty high value.
+
+Question 3
+
+A)Do an OLS multiple linear regression of body mass on the four predictors: species, sex, flipper length
+and bill length. You may use any sensible encoding of your qualitative predictors. State the resulting linear
+model in the same form as in Question 2(A). Report R2 and also the residual sum of squares (RSS), which is
+the same thing as the sum of squared errors (SSE).
+```{r echo=FALSE}
+lm2.fit <- lm(body_mass_g ~ species+sex+flipper_length_mm+bill_length_mm, data = df)
+summary(lm2.fit)
+B0 = summary(lm2.fit)$coefficients[[1]]
+B0 = round(B0, digits = 4)
+B1 = summary(lm2.fit)$coefficients[[2]]
+B1 = round(B1, digits = 4)
+B2 = summary(lm2.fit)$coefficients[[3]]
+B2 = round(B2, digits = 4)
+B3 = summary(lm2.fit)$coefficients[[4]]
+B3 = round(B3, digits = 4)
+B4 = summary(lm2.fit)$coefficients[[5]]
+B4 = round(B4, digits = 4)
+R2= summary(lm2.fit)$r.squared
+RSS = sum(residuals(lm2.fit)^2)
+
+```
+
+
+```{r echo=FALSE}
+library('fastDummies')
+penguins_dummy = dummy_cols(df,select_columns= c('species','sex'), remove_selected_columns = TRUE)
+penguins_dummy
+```
+Linear model obtained from OLS multiple linear regression:
+                      body mass = `r B0` + `r B1` * (species) + `r B2` * (sex) + `r B3` * (flipper length) + `r B4` * (bill length).
+                      
+The value for $R^2$ is 
+                      $R^2$ = `r R2`.
+                 
+The value for the Residual Sum of Squares(RSS) is 
+                      RSS = `r RSS`.
+
+
+B) 
+
+```{r echo=FALSE}
+ lm3.fit <- lm(body_mass_g ~ species_Chinstrap + species_Gentoo + sex_male + flipper_length_mm + bill_length_mm, data = penguins_dummy)
+summary(lm3.fit)
+
+```
+
+```{r}
+dfz = as.data.frame(scale(penguins_dummy))
+lm4.fit = lm(body_mass_g ~ species_Chinstrap + species_Gentoo + sex_male + flipper_length_mm + bill_length_mm, data = dfz)
+summary(lm4.fit)
+```
+
+After standardizing the variables, we can see the coefficients of speciesGentoo has the largest absolute value(4.214e_01) so it has the strongest value on the prediction of the variable of body mass.  
+
+Question 4
+
+A)
+```{r echo=TRUE}
+SSE <- function(ypred,ytrue)
+{
+  sum=0
+  for(x in 1:length(ypred)){
+     ss = (ypred[x] - ytrue[x])**2
+     sum = sum + ss
+  }
+    return(sum)
+  }
+```
+B)  
+  
+
+
+```{r echo=FALSE}
+set.seed(1)
+train_size = floor(0.5 * nrow(df))
+train_ind = sample(seq_len(nrow(df)), size = train_size)
+train = df[train_ind, ]
+test = df[-train_ind, ]
+
+lm5.fit <- lm(body_mass_g ~ flipper_length_mm, data = train)
+summary(lm5.fit)
+
+```
+
+```{r echo=FALSE}
+SSEtraining1 = SSE(predict(lm5.fit, newdata = train),train$body_mass_g)
+SSEtest1 = SSE(predict(lm5.fit,newdata= test), test$body_mass_g)
+```
+
+The values for SSE_Training and SSE_Test are :
+                SEE_Training = `r SSEtraining1` and
+                SEE_Test = `r SSEtest1`
+
+C)
+```{r echo=FALSE}
+lm6.fit <- lm(body_mass_g ~ species+sex+flipper_length_mm+bill_length_mm, data = train)
+SSEtraining2 = SSE(predict(lm6.fit, newdata = train),train$body_mass_g)
+SSEtest2 = SSE(predict(lm6.fit,newdata= test), test$body_mass_g)
+```
+The values for SSE_Training and SSE_Test are :
+                SEE_Training = `r SSEtraining2` and 
+                SEE_Test = `r SSEtest2`
+                
+D)
+
+```{=tex}
+\begin{tabular}{c|c|c}
+Method & Training SSE & Test SSE \\
+\hline \\
+Simple Linear (flipper only) & `r SSEtraining1` & `r SSEtest1` \\ 
+Multiple Linear & `r SSEtraining2` & `r SSEtest2` \\ 
+\end{tabular}
+```
+
+
